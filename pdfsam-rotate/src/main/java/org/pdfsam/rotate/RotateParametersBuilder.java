@@ -60,43 +60,47 @@ class RotateParametersBuilder extends AbstractPdfOutputParametersBuilder<BulkRot
 			this.inputs.add(new PdfRotationInput(source, rotation, predefinedRotationType));
 		} else {
 			
-			ArrayList<PageRange> a1 = new ArrayList<PageRange>();
+			ArrayList<PageRange> a1 = a1(pageSelection);
 			if (predefinedRotationType == predefinedRotationType.EVEN_PAGES) {
-				pageSelection.forEach(new Consumer<PageRange>() {
-
-					@Override
-					public void accept(PageRange t) {
-						for (int i = t.getStart(); i <= t.getEnd(); i++) {
-							if (i % 2 == 0) {
-								a1.add(new PageRange(i, i));
-							}
-						}
-					}
-				});
-
 				this.inputs.add(new PdfRotationInput(source, rotation, a1.toArray(PageRange[]::new)));
 			}
 			if (predefinedRotationType == predefinedRotationType.ODD_PAGES) {
-				pageSelection.forEach(new Consumer<PageRange>() {
-
-					@Override
-					public void accept(PageRange t) {
-						for (int i = t.getStart(); i <= t.getEnd(); i++) {
-							if (i % 2 != 0) {
-								a1.add(new PageRange(i, i));
-							}
-						}
-					}
-				});
-
 				this.inputs.add(new PdfRotationInput(source, rotation, a1.toArray(PageRange[]::new)));
 			}
 			if (predefinedRotationType == predefinedRotationType.ALL_PAGES) {
-				this.inputs
-						.add(new PdfRotationInput(source, rotation, pageSelection.stream().toArray(PageRange[]::new)));
+				this.inputs.add(new PdfRotationInput(source, rotation, pageSelection.stream().toArray(PageRange[]::new)));
 			}
 			
 		}
+	}
+
+	private ArrayList<PageRange> a1(Set<PageRange> pageSelection) {
+		ArrayList<PageRange> a1 = new ArrayList<PageRange>();
+		if (predefinedRotationType == predefinedRotationType.EVEN_PAGES) {
+			pageSelection.forEach(new Consumer<PageRange>() {
+				@Override
+				public void accept(PageRange t) {
+					for (int i = t.getStart(); i <= t.getEnd(); i++) {
+						if (i % 2 == 0) {
+							a1.add(new PageRange(i, i));
+						}
+					}
+				}
+			});
+		}
+		if (predefinedRotationType == predefinedRotationType.ODD_PAGES) {
+			pageSelection.forEach(new Consumer<PageRange>() {
+				@Override
+				public void accept(PageRange t) {
+					for (int i = t.getStart(); i <= t.getEnd(); i++) {
+						if (i % 2 != 0) {
+							a1.add(new PageRange(i, i));
+						}
+					}
+				}
+			});
+		}
+		return a1;
 	}
 
     boolean hasInput() {
