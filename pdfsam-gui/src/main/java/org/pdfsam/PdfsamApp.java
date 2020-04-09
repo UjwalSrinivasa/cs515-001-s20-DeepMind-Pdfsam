@@ -92,11 +92,12 @@ import javafx.stage.Stage;
  * 
  */
 public class PdfsamApp extends Application {
-    private static final Logger LOG = LoggerFactory.getLogger(PdfsamApp.class);
+    private PdfsamAppMod pdfsamAppMod = new PdfsamAppMod();
+
+	public static final Logger LOG = LoggerFactory.getLogger(PdfsamApp.class);
 
     private static StopWatch STOPWATCH = new StopWatch();
     private Stage primaryStage;
-    private UserContext userContext = new DefaultUserContext();
     private List<String> rawParameters;
     private boolean clean;
     private Injector injector;
@@ -112,12 +113,12 @@ public class PdfsamApp extends Application {
         System.setProperty(Sejda.UNETHICAL_READ_PROPERTY_NAME, Boolean.TRUE.toString());
         LOG.info("Starting PDFsam");
         clean = rawParameters.contains("--clean") || rawParameters.contains("-clean") || rawParameters.contains("-c");
-        cleanUserContextIfNeeded(userContext);
-        String localeString = userContext.getLocale();
+        cleanUserContextIfNeeded(pdfsamAppMod.getUserContext());
+        String localeString = pdfsamAppMod.getUserContext().getLocale();
         if (isNotBlank(localeString)) {
             eventStudio().broadcast(new SetLocaleEvent(localeString));
         }
-        String defaultworkingPath = userContext.getDefaultWorkingPath();
+        String defaultworkingPath = pdfsamAppMod.getUserContext().getDefaultWorkingPath();
         if (isNotBlank(defaultworkingPath)) {
             try {
                 if (Files.isDirectory(Paths.get(defaultworkingPath))) {
@@ -160,8 +161,8 @@ public class PdfsamApp extends Application {
         requestPremiumModulesDescriptionIfRequired();
         initWindowsStatusController(primaryStage);
         initDialogsOwner(primaryStage);
-        initActiveModule();
-        loadWorkspaceIfRequired();
+        pdfsamAppMod.initActiveModule();
+        pdfsamAppMod.loadWorkspaceIfRequired(this);
         initOpenButtons();
         primaryStage.show();
 
@@ -226,7 +227,7 @@ public class PdfsamApp extends Application {
             status.setMode(StageMode.valueFor(this.primaryStage));
             eventStudio().broadcast(new SetLatestStageStatusRequest(status));
         }
-        saveWorkspaceIfRequired();
+        pdfsamAppMod.saveWorkspaceIfRequired();
         eventStudio().broadcast(new ShutdownEvent());
         injector.close();
     }
@@ -280,14 +281,6 @@ public class PdfsamApp extends Application {
         injector.instance(WindowStatusController.class).setStage(primaryStage);
     }
 
-    private void initActiveModule() {
-        String startupModule = userContext.getStartupModule();
-        if (isNotBlank(startupModule)) {
-            LOG.trace("Activating startup module '{}'", startupModule);
-            eventStudio().broadcast(activeteModule(startupModule));
-        }
-    }
-
     private void initOpenButtons() {
         List<Module> modules = injector.instancesOfType(Module.class);
         List<OpenButton> openButtons = injector.instancesOfType(OpenButton.class);
@@ -302,22 +295,7 @@ public class PdfsamApp extends Application {
         }
     }
 
-    private void loadWorkspaceIfRequired() {
-        String workspace = ofNullable(getParameters().getNamed().get("workspace")).filter(StringUtils::isNotBlank)
-                .orElseGet(userContext::getDefaultWorkspacePath);
-        if (isNotBlank(workspace) && Files.exists(Paths.get(workspace))) {
-            eventStudio().broadcast(new LoadWorkspaceEvent(new File(workspace)));
-        }
-    }
 
-    private void saveWorkspaceIfRequired() {
-        if (userContext.isSaveWorkspaceOnExit()) {
-            String workspace = userContext.getDefaultWorkspacePath();
-            if (isNotBlank(workspace) && Files.exists(Paths.get(workspace))) {
-                eventStudio().broadcast(new SaveWorkspaceEvent(new File(workspace), true));
-            }
-        }
-    }
 
     public static String getOpenCmd(String url) throws IOException {
         String os = System.getProperty("os.name").toLowerCase();
